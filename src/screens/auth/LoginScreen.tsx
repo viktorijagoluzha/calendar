@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
@@ -44,8 +43,12 @@ const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleSignIn = async () => {
-    if (!validateRequiredField(email, t('errors.enterEmail'))) return;
-    if (!validateRequiredField(password, t('errors.enterPassword'))) return;
+    if (
+      !validateRequiredField(email, t('errors.enterEmail')) ||
+      !validateRequiredField(password, t('errors.enterPassword'))
+    ) {
+      return;
+    }
 
     await execute(
       async () => {
@@ -68,14 +71,6 @@ const LoginScreen = ({ navigation }: any) => {
     );
   };
 
-  const handleForgotPassword = () => {
-    navigation.navigate('ForgotPassword');
-  };
-
-  const handleSignUp = () => {
-    navigation.navigate('SignUp');
-  };
-
   return (
     <AuthContainer title={t('auth.signIn')} subtitle="Welcome back!">
       <View style={styles.inputContainer}>
@@ -89,6 +84,7 @@ const LoginScreen = ({ navigation }: any) => {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          editable={!isLoading && !loading}
         />
       </View>
 
@@ -98,10 +94,11 @@ const LoginScreen = ({ navigation }: any) => {
           value={password}
           onChangeText={setPassword}
           placeholder={t('auth.enterPassword')}
+          editable={!isLoading && !loading}
         />
       </View>
 
-      <TouchableOpacity onPress={handleForgotPassword}>
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
         <Text style={styles.forgotPassword}>{t('auth.forgotPassword')}</Text>
       </TouchableOpacity>
 
@@ -129,7 +126,7 @@ const LoginScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity onPress={handleSignUp}>
+      <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
         <Text style={styles.signUpText}>{t('auth.signUp')}</Text>
       </TouchableOpacity>
     </AuthContainer>

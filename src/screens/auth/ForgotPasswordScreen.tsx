@@ -6,21 +6,33 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useFormValidation } from '../../hooks/useFormValidation';
 import { t } from '../../i18n';
 import { AuthContainer } from '../../components/auth';
 import { theme } from '../../theme';
 
 const ForgotPasswordScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
+  const { loading, execute } = useAsyncAction();
+  const { validateEmail } = useFormValidation();
 
-  const handleResetPassword = () => {
-    Alert.alert(t('common.success'), t('success.passwordResetSent'));
-    console.log('Reset password for:', email);
-  };
+  const handleResetPassword = async () => {
+    if (!validateEmail(email)) return;
 
-  const handleBackToLogin = () => {
-    navigation.navigate('Login');
+    await execute(
+      async () => {
+        // Simulate API call - replace with actual password reset service
+        await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
+      },
+      {
+        successMessage: t('success.passwordResetSent'),
+        errorMessage: t('errors.passwordResetFailed'),
+        onSuccess: () => navigation.navigate('Login'),
+      },
+    );
   };
 
   return (
@@ -39,17 +51,23 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          editable={!loading}
         />
       </View>
 
       <TouchableOpacity
         style={styles.resetButton}
         onPress={handleResetPassword}
+        disabled={loading}
       >
-        <Text style={styles.resetButtonText}>{t('auth.resetPassword')}</Text>
+        {loading ? (
+          <ActivityIndicator color={theme.colors.text.inverse} />
+        ) : (
+          <Text style={styles.resetButtonText}>{t('auth.resetPassword')}</Text>
+        )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={handleBackToLogin}>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.backToLoginText}>{t('auth.signIn')}</Text>
       </TouchableOpacity>
     </AuthContainer>
