@@ -24,7 +24,6 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
 
     await execute(
       async () => {
-        // Simulate API call - replace with actual password reset service
         await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
       },
       {

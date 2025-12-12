@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { t } from '../../i18n';
 import { theme } from '../../theme';
+import { TIME_PLACEHOLDERS, TIME_SEPARATOR, LOCALE } from '../../constants';
 
 interface EventFormProps {
   title: string;
@@ -22,6 +23,7 @@ interface EventFormProps {
   onDateChange: (date: Date) => void;
   onStartTimeChange: (time: string) => void;
   onEndTimeChange: (time: string) => void;
+  editable?: boolean;
 }
 
 export const EventForm: React.FC<EventFormProps> = ({
@@ -35,15 +37,35 @@ export const EventForm: React.FC<EventFormProps> = ({
   onDateChange,
   onStartTimeChange,
   onEndTimeChange,
+  editable = true,
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      onDateChange(selectedDate);
+  const handleDateChange = useCallback(
+    (event: any, selectedDate?: Date) => {
+      setShowDatePicker(Platform.OS === 'ios');
+      if (selectedDate) {
+        onDateChange(selectedDate);
+      }
+    },
+    [onDateChange],
+  );
+
+  const handleShowDatePicker = useCallback(() => {
+    if (editable) {
+      setShowDatePicker(true);
     }
-  };
+  }, [editable]);
+
+  const formattedDate = useMemo(
+    () =>
+      date.toLocaleDateString(LOCALE.DEFAULT, {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    [date],
+  );
 
   return (
     <>
@@ -54,38 +76,42 @@ export const EventForm: React.FC<EventFormProps> = ({
           value={title}
           onChangeText={onTitleChange}
           placeholderTextColor={theme.colors.text.tertiary}
+          editable={editable}
+          accessibilityLabel={t('calendar.eventTitle')}
         />
       </View>
 
       <View style={styles.dateTimeSection}>
         <TouchableOpacity
           style={styles.dateTimeButton}
-          onPress={() => setShowDatePicker(true)}
+          onPress={handleShowDatePicker}
+          disabled={!editable}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('calendar.date')}: ${formattedDate}`}
+          accessibilityHint={editable ? 'Tap to change date' : undefined}
         >
-          <Text style={styles.dateTimeText}>
-            {date.toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </Text>
+          <Text style={styles.dateTimeText}>{formattedDate}</Text>
         </TouchableOpacity>
 
         <View style={styles.timeRow}>
           <TextInput
             style={styles.timeInput}
-            placeholder="10:30 AM"
+            placeholder={TIME_PLACEHOLDERS.START}
             value={startTime}
             onChangeText={onStartTimeChange}
             placeholderTextColor={theme.colors.text.tertiary}
+            editable={editable}
+            accessibilityLabel={t('calendar.startTime')}
           />
-          <Text style={styles.timeSeparator}>-</Text>
+          <Text style={styles.timeSeparator}>{TIME_SEPARATOR}</Text>
           <TextInput
             style={styles.timeInput}
-            placeholder="11:30 AM"
+            placeholder={TIME_PLACEHOLDERS.END}
             value={endTime}
             onChangeText={onEndTimeChange}
             placeholderTextColor={theme.colors.text.tertiary}
+            editable={editable}
+            accessibilityLabel={t('calendar.endTime')}
           />
         </View>
 
@@ -110,6 +136,8 @@ export const EventForm: React.FC<EventFormProps> = ({
           numberOfLines={4}
           textAlignVertical="top"
           placeholderTextColor={theme.colors.text.tertiary}
+          editable={editable}
+          accessibilityLabel={t('calendar.description')}
         />
       </View>
     </>

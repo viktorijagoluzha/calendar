@@ -1,5 +1,11 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+} from 'react-native';
 import { Event } from '../../types/Event';
 import { formatTimeRange } from '../../utils/timeFormat';
 import { t } from '../../i18n';
@@ -10,44 +16,84 @@ interface EventListProps {
   onEventPress: (eventId: string) => void;
 }
 
+interface EventCardProps {
+  event: Event;
+  onPress: (eventId: string) => void;
+}
+
+const EventCard: React.FC<EventCardProps> = React.memo(({ event, onPress }) => {
+  const handlePress = useCallback(() => {
+    onPress(event.id);
+  }, [event.id, onPress]);
+
+  const timeRange = useMemo(
+    () => formatTimeRange(event.startTime, event.endTime),
+    [event.startTime, event.endTime],
+  );
+
+  return (
+    <TouchableOpacity
+      style={styles.eventCard}
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title}, ${timeRange}`}
+      accessibilityHint={t('calendar.tapToViewDetails')}
+    >
+      <Text style={styles.eventTitle}>{event.title}</Text>
+      <Text style={styles.eventTime}>{timeRange}</Text>
+      {event.description ? (
+        <Text style={styles.eventDescription} numberOfLines={2}>
+          {event.description}
+        </Text>
+      ) : null}
+    </TouchableOpacity>
+  );
+});
+
+EventCard.displayName = 'EventCard';
+
 export const EventList: React.FC<EventListProps> = ({
   events,
   onEventPress,
 }) => {
-  if (events.length === 0) {
-    return (
+  const renderItem = useCallback(
+    ({ item }: { item: Event }) => (
+      <EventCard event={item} onPress={onEventPress} />
+    ),
+    [onEventPress],
+  );
+
+  const keyExtractor = useCallback((item: Event) => item.id, []);
+
+  const ListEmptyComponent = useMemo(
+    () => (
       <View style={styles.emptyState}>
         <Text style={styles.emptyStateText}>
           {t('calendar.noEventsScheduled')}
         </Text>
       </View>
-    );
-  }
+    ),
+    [],
+  );
 
   return (
-    <View>
-      {events.map(event => (
-        <TouchableOpacity
-          key={event.id}
-          style={styles.eventCard}
-          onPress={() => onEventPress(event.id)}
-        >
-          <Text style={styles.eventTitle}>{event.title}</Text>
-          <Text style={styles.eventTime}>
-            {formatTimeRange(event.startTime, event.endTime)}
-          </Text>
-          {event.description ? (
-            <Text style={styles.eventDescription} numberOfLines={2}>
-              {event.description}
-            </Text>
-          ) : null}
-        </TouchableOpacity>
-      ))}
-    </View>
+    <FlatList
+      data={events}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      ListEmptyComponent={ListEmptyComponent}
+      contentContainerStyle={
+        events.length === 0 ? undefined : styles.listContent
+      }
+      showsVerticalScrollIndicator={false}
+    />
   );
 };
 
 const styles = StyleSheet.create({
+  listContent: {
+    paddingBottom: theme.spacing.sm,
+  },
   eventCard: {
     backgroundColor: theme.colors.background,
     padding: theme.spacing.md,

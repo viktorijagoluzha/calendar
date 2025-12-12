@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -17,6 +17,7 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'danger';
   style?: ViewStyle;
   textStyle?: TextStyle;
+  testID?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -27,8 +28,9 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   style,
   textStyle,
+  testID,
 }) => {
-  const getBackgroundColor = () => {
+  const backgroundColor = useMemo(() => {
     if (disabled) return theme.colors.gray[300];
     switch (variant) {
       case 'secondary':
@@ -38,16 +40,22 @@ export const Button: React.FC<ButtonProps> = ({
       default:
         return theme.colors.primary;
     }
-  };
+  }, [disabled, variant]);
+
+  const isDisabled = disabled || loading;
 
   return (
     <TouchableOpacity
-      style={[styles.button, { backgroundColor: getBackgroundColor() }, style]}
+      style={[styles.button, { backgroundColor }, style]}
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={isDisabled}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityLabel={title}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={theme.colors.text.inverse} />
       ) : (
         <Text style={[styles.buttonText, textStyle]}>{title}</Text>
       )}
@@ -57,14 +65,14 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 16,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 50,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...theme.typography.button,
+    color: theme.colors.text.inverse,
   },
 });

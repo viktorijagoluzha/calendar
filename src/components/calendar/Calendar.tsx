@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { theme } from '../../theme';
+import { DAYS, MONTHS } from '../../constants';
 
 interface CalendarProps {
   selectedDate: Date;
@@ -8,21 +9,11 @@ interface CalendarProps {
   eventDates?: string[];
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
+const formatDateString = (year: number, month: number, day: number): string => {
+  const monthStr = String(month + 1).padStart(2, '0');
+  const dayStr = String(day).padStart(2, '0');
+  return `${year}-${monthStr}-${dayStr}`;
+};
 
 export const Calendar: React.FC<CalendarProps> = ({
   selectedDate,
@@ -30,6 +21,30 @@ export const Calendar: React.FC<CalendarProps> = ({
   eventDates = [],
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
+
+  const handlePrevMonth = useCallback(() => {
+    setCurrentMonth(
+      prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+    );
+  }, []);
+
+  const handleNextMonth = useCallback(() => {
+    setCurrentMonth(
+      prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+    );
+  }, []);
+
+  const handleDayPress = useCallback(
+    (day: number) => {
+      const newDate = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth(),
+        day,
+      );
+      onDateSelect(newDate);
+    },
+    [currentMonth, onDateSelect],
+  );
 
   const daysInMonth = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -50,62 +65,69 @@ export const Calendar: React.FC<CalendarProps> = ({
     return days;
   }, [currentMonth]);
 
-  const handlePrevMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
-    );
-  };
+  const today = useMemo(() => new Date(), []);
 
-  const handleNextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
-    );
-  };
+  const monthYear = useMemo(
+    () => `${MONTHS[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`,
+    [currentMonth],
+  );
 
-  const handleDayPress = (day: number) => {
-    const newDate = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day,
-    );
-    onDateSelect(newDate);
-  };
+  const eventDatesSet = useMemo(() => new Set(eventDates), [eventDates]);
 
-  const isSelected = (day: number): boolean => {
-    return (
-      selectedDate.getDate() === day &&
-      selectedDate.getMonth() === currentMonth.getMonth() &&
-      selectedDate.getFullYear() === currentMonth.getFullYear()
-    );
-  };
+  const isSelected = useCallback(
+    (day: number): boolean => {
+      return (
+        selectedDate.getDate() === day &&
+        selectedDate.getMonth() === currentMonth.getMonth() &&
+        selectedDate.getFullYear() === currentMonth.getFullYear()
+      );
+    },
+    [selectedDate, currentMonth],
+  );
 
-  const isToday = (day: number): boolean => {
-    const today = new Date();
-    return (
-      today.getDate() === day &&
-      today.getMonth() === currentMonth.getMonth() &&
-      today.getFullYear() === currentMonth.getFullYear()
-    );
-  };
+  const isToday = useCallback(
+    (day: number): boolean => {
+      return (
+        today.getDate() === day &&
+        today.getMonth() === currentMonth.getMonth() &&
+        today.getFullYear() === currentMonth.getFullYear()
+      );
+    },
+    [today, currentMonth],
+  );
 
-  const hasEvent = (day: number): boolean => {
-    const year = currentMonth.getFullYear();
-    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
-    const dayStr = String(day).padStart(2, '0');
-    const dateStr = `${year}-${month}-${dayStr}`;
-    return eventDates.includes(dateStr);
-  };
+  const hasEvent = useCallback(
+    (day: number): boolean => {
+      const dateStr = formatDateString(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth(),
+        day,
+      );
+      return eventDatesSet.has(dateStr);
+    },
+    [currentMonth, eventDatesSet],
+  );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handlePrevMonth} style={styles.navButton}>
+        <TouchableOpacity
+          onPress={handlePrevMonth}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
+        >
           <Text style={styles.navButtonText}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.monthText}>
-          {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        <Text style={styles.monthText} accessibilityRole="header">
+          {monthYear}
         </Text>
-        <TouchableOpacity onPress={handleNextMonth} style={styles.navButton}>
+        <TouchableOpacity
+          onPress={handleNextMonth}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
+        >
           <Text style={styles.navButtonText}>{'>'}</Text>
         </TouchableOpacity>
       </View>
@@ -129,6 +151,10 @@ export const Calendar: React.FC<CalendarProps> = ({
                   isSelected(day) && styles.selectedDay,
                   isToday(day) && !isSelected(day) && styles.todayDay,
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${MONTHS[currentMonth.getMonth()]} ${day}`}
+                accessibilityState={{ selected: isSelected(day) }}
+                accessibilityHint={hasEvent(day) ? 'Has events' : undefined}
               >
                 <Text
                   style={[

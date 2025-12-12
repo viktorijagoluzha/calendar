@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Alert } from 'react-native';
 import { t } from '../i18n';
+import { EMAIL_REGEX, MIN_PASSWORD_LENGTH } from '../constants';
 
 export const useFormValidation = () => {
   const validateEmail = useMemo(
@@ -11,8 +12,7 @@ export const useFormValidation = () => {
           return false;
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!EMAIL_REGEX.test(email)) {
           Alert.alert(t('common.error'), t('errors.invalidEmail'));
           return false;
         }
@@ -24,7 +24,7 @@ export const useFormValidation = () => {
 
   const validatePassword = useMemo(
     () =>
-      (password: string, minLength: number = 6): boolean => {
+      (password: string, minLength: number = MIN_PASSWORD_LENGTH): boolean => {
         if (!password) {
           Alert.alert(t('common.error'), t('errors.enterPassword'));
           return false;

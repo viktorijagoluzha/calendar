@@ -44,6 +44,7 @@ export const translations = {
       cancel: 'Cancel',
       enterEventTitle: 'Enter event title',
       enterDescription: 'Enter description (optional)',
+      tapToViewDetails: 'Tap to view event details',
     },
     profile: {
       profile: 'Profile',

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ interface AuthContainerProps {
   title: string;
   subtitle: string;
   scrollable?: boolean;
+  testID?: string;
 }
 
 export const AuthContainer: React.FC<AuthContainerProps> = ({
@@ -23,28 +24,57 @@ export const AuthContainer: React.FC<AuthContainerProps> = ({
   title,
   subtitle,
   scrollable = false,
+  testID,
 }) => {
-  const content = (
-    <View style={styles.content}>
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>{t('common.appName')}</Text>
+  const keyboardBehavior = useMemo(
+    () => (Platform.OS === 'ios' ? 'padding' : 'height'),
+    [],
+  );
+
+  const appName = useMemo(() => t('common.appName'), []);
+
+  const content = useMemo(
+    () => (
+      <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Text
+            style={styles.logoText}
+            accessibilityRole="header"
+            accessibilityLabel={appName}
+          >
+            {appName}
+          </Text>
+        </View>
+
+        <Text
+          style={styles.title}
+          accessibilityRole="header"
+          accessibilityLabel={title}
+        >
+          {title}
+        </Text>
+        <Text style={styles.subtitle} accessibilityLabel={subtitle}>
+          {subtitle}
+        </Text>
+
+        {children}
       </View>
-
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-
-      {children}
-    </View>
+    ),
+    [children, title, subtitle, appName],
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} testID={testID}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={keyboardBehavior}
         style={styles.keyboardView}
       >
         {scrollable ? (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {content}
           </ScrollView>
         ) : (
@@ -78,6 +108,7 @@ const styles = StyleSheet.create({
   logoText: {
     ...theme.typography.body1,
     fontWeight: '500',
+    color: theme.colors.text.primary,
   },
   title: {
     ...theme.typography.h2,

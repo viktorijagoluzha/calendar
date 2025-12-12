@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { theme } from '../../theme';
@@ -12,6 +12,7 @@ interface MenuItemProps {
   switchValue?: boolean;
   onSwitchChange?: (value: boolean) => void;
   disabled?: boolean;
+  testID?: string;
 }
 
 export const MenuItem: React.FC<MenuItemProps> = ({
@@ -23,21 +24,26 @@ export const MenuItem: React.FC<MenuItemProps> = ({
   switchValue = false,
   onSwitchChange,
   disabled = false,
+  testID,
 }) => {
-  const content = (
-    <>
-      <View style={styles.menuItemLeft}>
-        <Icon
-          name={icon}
-          size={24}
-          color={disabled ? theme.colors.text.tertiary : theme.colors.primary}
-          style={styles.menuIcon}
-        />
-        <Text style={[styles.menuLabel, disabled && styles.menuLabelDisabled]}>
-          {label}
-        </Text>
-      </View>
-      {showSwitch ? (
+  const iconColor = useMemo(
+    () => (disabled ? theme.colors.text.tertiary : theme.colors.primary),
+    [disabled],
+  );
+
+  const containerStyle = useMemo(
+    () => [styles.menuItem, disabled && styles.menuItemDisabled],
+    [disabled],
+  );
+
+  const labelStyle = useMemo(
+    () => [styles.menuLabel, disabled && styles.menuLabelDisabled],
+    [disabled],
+  );
+
+  const renderRightElement = useMemo(() => {
+    if (showSwitch) {
+      return (
         <Switch
           value={switchValue}
           onValueChange={onSwitchChange}
@@ -47,20 +53,35 @@ export const MenuItem: React.FC<MenuItemProps> = ({
             true: theme.colors.primary,
           }}
           thumbColor={theme.colors.background}
+          testID={testID ? `${testID}-switch` : undefined}
         />
-      ) : showChevron ? (
+      );
+    }
+    if (showChevron) {
+      return (
         <Icon
           name="chevron-forward"
           size={24}
           color={theme.colors.text.tertiary}
         />
-      ) : null}
+      );
+    }
+    return null;
+  }, [showSwitch, showChevron, switchValue, onSwitchChange, disabled, testID]);
+
+  const content = (
+    <>
+      <View style={styles.menuItemLeft}>
+        <Icon name={icon} size={24} color={iconColor} style={styles.menuIcon} />
+        <Text style={labelStyle}>{label}</Text>
+      </View>
+      {renderRightElement}
     </>
   );
 
   if (showSwitch || !onPress) {
     return (
-      <View style={[styles.menuItem, disabled && styles.menuItemDisabled]}>
+      <View style={containerStyle} testID={testID}>
         {content}
       </View>
     );
@@ -68,9 +89,13 @@ export const MenuItem: React.FC<MenuItemProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.menuItem, disabled && styles.menuItemDisabled]}
+      style={containerStyle}
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      accessibilityLabel={label}
     >
       {content}
     </TouchableOpacity>
