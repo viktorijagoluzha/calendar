@@ -8,19 +8,24 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // Mock react-native-biometrics
-jest.mock('react-native-biometrics', () => ({
-  BiometryTypes: {
-    TouchID: 'TouchID',
-    FaceID: 'FaceID',
-    Biometrics: 'Biometrics',
-  },
-  default: jest.fn(() => ({
+jest.mock('react-native-biometrics', () => {
+  const mockBiometrics = jest.fn().mockImplementation(() => ({
     isSensorAvailable: jest.fn(() =>
       Promise.resolve({ available: true, biometryType: 'FaceID' }),
     ),
     simplePrompt: jest.fn(() => Promise.resolve({ success: true })),
-  })),
-}));
+  }));
+
+  return {
+    __esModule: true,
+    default: mockBiometrics,
+    BiometryTypes: {
+      TouchID: 'TouchID',
+      FaceID: 'FaceID',
+      Biometrics: 'Biometrics',
+    },
+  };
+});
 
 // Mock react-native-vector-icons
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');

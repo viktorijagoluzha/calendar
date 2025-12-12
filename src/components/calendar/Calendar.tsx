@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../../theme';
 import { DAYS, MONTHS } from '../../constants';
 
@@ -117,7 +118,11 @@ export const Calendar: React.FC<CalendarProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Previous month"
         >
-          <Text style={styles.navButtonText}>{'<'}</Text>
+          <Icon
+            name="chevron-left"
+            size={28}
+            color={theme.colors.text.primary}
+          />
         </TouchableOpacity>
         <Text style={styles.monthText} accessibilityRole="header">
           {monthYear}
@@ -128,7 +133,11 @@ export const Calendar: React.FC<CalendarProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Next month"
         >
-          <Text style={styles.navButtonText}>{'>'}</Text>
+          <Icon
+            name="chevron-right"
+            size={28}
+            color={theme.colors.text.primary}
+          />
         </TouchableOpacity>
       </View>
 
