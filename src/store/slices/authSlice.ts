@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authService } from '../../services/authService';
 import { biometricService } from '../../services/biometricService';
 import { AuthState, User } from '../../types/User';
+import type { RootState } from '../index';
 
 const initialState: AuthState = {
   user: null,
@@ -67,24 +68,24 @@ export const toggleBiometrics = createAsyncThunk(
   },
 );
 
-export const updateProfile = createAsyncThunk(
+export const updateProfile = createAsyncThunk<
+  User,
+  {
+    fullName: string;
+    email: string;
+    currentPassword?: string;
+    newPassword?: string;
+  },
+  { state: RootState }
+>(
   'auth/updateProfile',
-  async (
-    {
-      fullName,
-      email,
-      currentPassword,
-      newPassword,
-    }: {
-      fullName: string;
-      email: string;
-      currentPassword?: string;
-      newPassword?: string;
-    },
-    { getState },
-  ) => {
-    const state = getState() as any;
-    const currentEmail = state.auth.user.email;
+  async ({ fullName, email, currentPassword, newPassword }, { getState }) => {
+    const state = getState();
+    const currentEmail = state.auth.user?.email;
+
+    if (!currentEmail) {
+      throw new Error('No user logged in');
+    }
 
     const user = await authService.updateProfile(currentEmail, {
       fullName,
@@ -106,63 +107,24 @@ const authSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      .addCase(signUp.pending, state => {
-        state.isLoading = true;
-      })
       .addCase(signUp.fulfilled, (state, action: PayloadAction<User>) => {
-        state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
-      })
-      .addCase(signUp.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(signIn.pending, state => {
-        state.isLoading = true;
       })
       .addCase(signIn.fulfilled, (state, action: PayloadAction<User>) => {
-        state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
-      })
-      .addCase(signIn.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(signInWithBiometrics.pending, state => {
-        state.isLoading = true;
       })
       .addCase(
         signInWithBiometrics.fulfilled,
         (state, action: PayloadAction<User>) => {
-          state.isLoading = false;
           state.user = action.payload;
           state.isAuthenticated = true;
         },
       )
-      .addCase(signInWithBiometrics.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(signOut.pending, state => {
-        state.isLoading = true;
-      })
       .addCase(signOut.fulfilled, state => {
-        state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
-      })
-      .addCase(signOut.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(checkAuth.pending, state => {
-        state.isLoading = true;
       })
       .addCase(
         checkAuth.fulfilled,
@@ -173,37 +135,39 @@ const authSlice = createSlice({
             biometricsEnabled: boolean;
           }>,
         ) => {
-          state.isLoading = false;
           state.user = action.payload.user;
           state.isAuthenticated = !!action.payload.user;
           state.biometricsEnabled = action.payload.biometricsEnabled;
         },
       )
-      .addCase(checkAuth.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder.addCase(
-      toggleBiometrics.fulfilled,
-      (state, action: PayloadAction<boolean>) => {
-        state.biometricsEnabled = action.payload;
-      },
-    );
-
-    builder
-      .addCase(updateProfile.pending, state => {
-        state.isLoading = true;
-      })
+      .addCase(
+        toggleBiometrics.fulfilled,
+        (state, action: PayloadAction<boolean>) => {
+          state.biometricsEnabled = action.payload;
+        },
+      )
       .addCase(
         updateProfile.fulfilled,
         (state, action: PayloadAction<User>) => {
-          state.isLoading = false;
           state.user = action.payload;
         },
       )
-      .addCase(updateProfile.rejected, state => {
-        state.isLoading = false;
-      });
+      .addMatcher(
+        action =>
+          action.type.endsWith('/pending') && action.type.startsWith('auth/'),
+        state => {
+          state.isLoading = true;
+        },
+      )
+      .addMatcher(
+        action =>
+          (action.type.endsWith('/fulfilled') ||
+            action.type.endsWith('/rejected')) &&
+          action.type.startsWith('auth/'),
+        state => {
+          state.isLoading = false;
+        },
+      );
   },
 });
 

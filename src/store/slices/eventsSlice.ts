@@ -64,61 +64,43 @@ const eventsSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      .addCase(loadEvents.pending, state => {
-        state.isLoading = true;
-      })
       .addCase(
         loadEvents.fulfilled,
         (state, action: PayloadAction<Event[]>) => {
-          state.isLoading = false;
           state.events = action.payload;
         },
       )
-      .addCase(loadEvents.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(createEvent.pending, state => {
-        state.isLoading = true;
-      })
       .addCase(createEvent.fulfilled, (state, action: PayloadAction<Event>) => {
-        state.isLoading = false;
         state.events.push(action.payload);
       })
-      .addCase(createEvent.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(updateEvent.pending, state => {
-        state.isLoading = true;
-      })
       .addCase(updateEvent.fulfilled, (state, action: PayloadAction<Event>) => {
-        state.isLoading = false;
         const index = state.events.findIndex(e => e.id === action.payload.id);
         if (index !== -1) {
           state.events[index] = action.payload;
         }
       })
-      .addCase(updateEvent.rejected, state => {
-        state.isLoading = false;
-      });
-
-    builder
-      .addCase(deleteEvent.pending, state => {
-        state.isLoading = true;
-      })
       .addCase(
         deleteEvent.fulfilled,
         (state, action: PayloadAction<string>) => {
-          state.isLoading = false;
           state.events = state.events.filter(e => e.id !== action.payload);
         },
       )
-      .addCase(deleteEvent.rejected, state => {
-        state.isLoading = false;
-      });
+      .addMatcher(
+        action =>
+          action.type.endsWith('/pending') && action.type.startsWith('events/'),
+        state => {
+          state.isLoading = true;
+        },
+      )
+      .addMatcher(
+        action =>
+          (action.type.endsWith('/fulfilled') ||
+            action.type.endsWith('/rejected')) &&
+          action.type.startsWith('events/'),
+        state => {
+          state.isLoading = false;
+        },
+      );
   },
 });
 
