@@ -7,12 +7,14 @@ interface PasswordInputProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
+  editable?: boolean;
 }
 
 export const PasswordInput: React.FC<PasswordInputProps> = ({
   value,
   onChangeText,
   placeholder,
+  editable = true,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -26,6 +28,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         onChangeText={onChangeText}
         secureTextEntry={!showPassword}
         autoCapitalize="none"
+        editable={editable}
       />
       <TouchableOpacity
         onPress={() => setShowPassword(!showPassword)}

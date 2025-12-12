@@ -48,15 +48,15 @@ const EditEventScreen = ({ navigation, route }: any) => {
     }
   }, [event]);
 
-  const handleUpdate = async () => {
-    if (!validateRequiredField(title, t('errors.enterEventTitle'))) {
-      return;
+  const reloadEvents = async () => {
+    if (user) {
+      await dispatch(loadEvents(user.id));
     }
+  };
 
-    if (!user) {
-      Alert.alert(t('common.error'), t('errors.userNotFound'));
-      return;
-    }
+  const handleUpdate = async () => {
+    if (!validateRequiredField(title, t('errors.enterEventTitle'))) return;
+    if (!user) return;
 
     await execute(
       async () => {
@@ -74,7 +74,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
           }),
         ).unwrap();
 
-        await dispatch(loadEvents(user.id));
+        await reloadEvents();
       },
       {
         successMessage: t('success.eventUpdated'),
@@ -85,6 +85,8 @@ const EditEventScreen = ({ navigation, route }: any) => {
   };
 
   const handleDelete = () => {
+    if (loading) return;
+
     Alert.alert(
       t('confirmations.deleteEvent'),
       t('confirmations.deleteEventMessage'),
@@ -100,7 +102,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
                 await dispatch(
                   deleteEvent({ userId: user.id, eventId }),
                 ).unwrap();
-                await dispatch(loadEvents(user.id));
+                await reloadEvents();
               },
               {
                 errorMessage: t('errors.deleteEventFailed'),
@@ -125,7 +127,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
           onBackPress={() => navigation.goBack()}
         />
         <View style={styles.centerContent}>
-          <Text>{t('errors.eventNotFound')}</Text>
+          <Text style={styles.errorText}>{t('errors.eventNotFound')}</Text>
         </View>
       </View>
     );
@@ -142,7 +144,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
         title={t('calendar.editEvent')}
         onBackPress={() => navigation.goBack()}
         rightIcon="trash-outline"
-        onRightPress={handleDelete}
+        onRightPress={loading ? undefined : handleDelete}
       />
 
       <ScrollView style={styles.content}>
@@ -189,6 +191,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorText: {
+    ...theme.typography.body1,
+    color: theme.colors.text.secondary,
   },
 });
 

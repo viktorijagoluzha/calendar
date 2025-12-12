@@ -30,10 +30,14 @@ const SignUpScreen = ({ navigation }: any) => {
   } = useFormValidation();
 
   const handleSignUp = async () => {
-    if (!validateRequiredField(fullName, t('errors.enterFullName'))) return;
-    if (!validateEmail(email)) return;
-    if (!validatePassword(password)) return;
-    if (!validatePasswordMatch(password, confirmPassword)) return;
+    if (
+      !validateRequiredField(fullName, t('errors.enterFullName')) ||
+      !validateEmail(email) ||
+      !validatePassword(password) ||
+      !validatePasswordMatch(password, confirmPassword)
+    ) {
+      return;
+    }
 
     await execute(
       async () => {
@@ -44,10 +48,6 @@ const SignUpScreen = ({ navigation }: any) => {
         errorMessage: t('errors.accountCreationFailed'),
       },
     );
-  };
-
-  const handleSignIn = () => {
-    navigation.navigate('Login');
   };
 
   return (
@@ -65,6 +65,7 @@ const SignUpScreen = ({ navigation }: any) => {
           value={fullName}
           onChangeText={setFullName}
           autoCapitalize="words"
+          editable={!isLoading && !loading}
         />
       </View>
 
@@ -79,6 +80,7 @@ const SignUpScreen = ({ navigation }: any) => {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          editable={!isLoading && !loading}
         />
       </View>
 
@@ -88,6 +90,7 @@ const SignUpScreen = ({ navigation }: any) => {
           value={password}
           onChangeText={setPassword}
           placeholder={t('auth.enterPassword')}
+          editable={!isLoading && !loading}
         />
       </View>
 
@@ -97,6 +100,7 @@ const SignUpScreen = ({ navigation }: any) => {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           placeholder={t('auth.reenterPassword')}
+          editable={!isLoading && !loading}
         />
       </View>
 
@@ -114,7 +118,7 @@ const SignUpScreen = ({ navigation }: any) => {
 
       <View style={styles.signInContainer}>
         <Text style={styles.signInText}>{t('auth.alreadyHaveAccount')}</Text>
-        <TouchableOpacity onPress={handleSignIn}>
+        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
           <Text style={styles.signInLink}>{t('auth.signIn')}</Text>
         </TouchableOpacity>
       </View>

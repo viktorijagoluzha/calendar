@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAuth';
 import { loadEvents, setSelectedDate } from '../../store/slices/eventsSlice';
-import { Calendar } from '../../components/calendar/Calendar';
+import { Calendar, EventList } from '../../components/calendar';
 import { Event } from '../../types/Event';
 import { t } from '../../i18n';
 import { theme } from '../../theme';
@@ -41,20 +41,18 @@ const HomeScreen = ({ navigation }: any) => {
     dispatch(setSelectedDate(dateString));
   };
 
-  const selectedDayEvents = events.filter(
-    (event: Event) => event.date === selectedDate,
+  const selectedDayEvents = useMemo(
+    () => events.filter((event: Event) => event.date === selectedDate),
+    [events, selectedDate],
   );
 
-  const eventDates: string[] = Array.from(
-    new Set(events.map((e: Event) => e.date)),
+  const eventDates = useMemo(
+    () => Array.from(new Set(events.map((e: Event) => e.date))),
+    [events],
   );
 
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+  const handleEventPress = (eventId: string) => {
+    navigation.navigate('EditEvent', { eventId });
   };
 
   return (
@@ -80,29 +78,15 @@ const HomeScreen = ({ navigation }: any) => {
         <View style={styles.eventsContainer}>
           <Text style={styles.sectionTitle}>{t('calendar.todaysEvents')}</Text>
 
-          {selectedDayEvents.length > 0 ? (
-            <View>
-              {selectedDayEvents.map((item: Event) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.eventCard}
-                  onPress={() =>
-                    navigation.navigate('EditEvent', { eventId: item.id })
-                  }
-                >
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventTime}>
-                    {formatTime(item.startTime)} - {formatTime(item.endTime)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                {t('calendar.noEventsScheduled')}
-              </Text>
-            </View>
+            <EventList
+              events={selectedDayEvents}
+              onEventPress={handleEventPress}
+            />
           )}
         </View>
       </ScrollView>
@@ -152,31 +136,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.md,
   },
-  eventCard: {
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  eventTitle: {
-    ...theme.typography.body1,
-    fontWeight: '500',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  eventTime: {
-    ...theme.typography.body2,
-    color: theme.colors.text.secondary,
-  },
-  emptyState: {
+  loadingContainer: {
     paddingVertical: theme.spacing.xxl,
     alignItems: 'center',
-  },
-  emptyStateText: {
-    ...theme.typography.body2,
-    color: theme.colors.text.tertiary,
   },
   floatingButton: {
     position: 'absolute',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
+import { View, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppDispatch } from '../../hooks/useAuth';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
@@ -22,15 +22,15 @@ const CreateEventScreen = ({ navigation }: any) => {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
 
-  const handleCreate = async () => {
-    if (!validateRequiredField(title, t('errors.enterEventTitle'))) {
-      return;
+  const reloadEvents = async () => {
+    if (user) {
+      await dispatch(loadEvents(user.id));
     }
+  };
 
-    if (!user) {
-      Alert.alert(t('common.error'), t('errors.userNotFound'));
-      return;
-    }
+  const handleCreate = async () => {
+    if (!validateRequiredField(title, t('errors.enterEventTitle'))) return;
+    if (!user) return;
 
     await execute(
       async () => {
@@ -47,7 +47,7 @@ const CreateEventScreen = ({ navigation }: any) => {
           }),
         ).unwrap();
 
-        await dispatch(loadEvents(user.id));
+        await reloadEvents();
       },
       {
         successMessage: t('success.eventCreated'),
