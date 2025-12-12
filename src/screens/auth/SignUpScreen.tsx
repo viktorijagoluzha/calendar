@@ -5,10 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
+import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useFormValidation } from '../../hooks/useFormValidation';
 import { signUp } from '../../store/slices/authSlice';
 import { t } from '../../i18n';
 import { AuthContainer, PasswordInput } from '../../components/auth';
@@ -20,32 +21,29 @@ const SignUpScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { isLoading, dispatch } = useAuth();
+  const { loading, execute } = useAsyncAction();
+  const {
+    validateEmail,
+    validatePassword,
+    validatePasswordMatch,
+    validateRequiredField,
+  } = useFormValidation();
 
   const handleSignUp = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert(t('common.error'), t('errors.fillAllFields'));
-      return;
-    }
+    if (!validateRequiredField(fullName, t('errors.enterFullName'))) return;
+    if (!validateEmail(email)) return;
+    if (!validatePassword(password)) return;
+    if (!validatePasswordMatch(password, confirmPassword)) return;
 
-    if (password !== confirmPassword) {
-      Alert.alert(t('common.error'), t('errors.passwordsNotMatch'));
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert(t('common.error'), t('errors.passwordMinLength'));
-      return;
-    }
-
-    try {
-      await dispatch(signUp({ fullName, email, password })).unwrap();
-      Alert.alert(t('common.success'), t('success.accountCreated'));
-    } catch (error: any) {
-      Alert.alert(
-        t('errors.signUpFailed'),
-        error.message || 'Failed to create account',
-      );
-    }
+    await execute(
+      async () => {
+        await dispatch(signUp({ fullName, email, password })).unwrap();
+      },
+      {
+        successMessage: t('success.accountCreated'),
+        errorMessage: t('errors.accountCreationFailed'),
+      },
+    );
   };
 
   const handleSignIn = () => {
@@ -105,9 +103,9 @@ const SignUpScreen = ({ navigation }: any) => {
       <TouchableOpacity
         style={styles.signUpButton}
         onPress={handleSignUp}
-        disabled={isLoading}
+        disabled={isLoading || loading}
       >
-        {isLoading ? (
+        {isLoading || loading ? (
           <ActivityIndicator color={theme.colors.text.inverse} />
         ) : (
           <Text style={styles.signUpButtonText}>{t('auth.signUp')}</Text>

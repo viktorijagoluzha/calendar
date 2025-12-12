@@ -1,39 +1,29 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Alert,
-  Platform,
-  StatusBar,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppDispatch } from '../../hooks/useAuth';
+import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useFormValidation } from '../../hooks/useFormValidation';
 import { createEvent, loadEvents } from '../../store/slices/eventsSlice';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Header, Button } from '../../components/common';
+import { EventForm } from '../../components/calendar/EventForm';
 import { t } from '../../i18n';
 import { theme } from '../../theme';
 
 const CreateEventScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
+  const { loading, execute } = useAsyncAction();
+  const { validateRequiredField } = useFormValidation();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
-    if (!title.trim()) {
-      Alert.alert(t('common.error'), t('errors.enterEventTitle'));
+    if (!validateRequiredField(title, t('errors.enterEventTitle'))) {
       return;
     }
 
@@ -42,41 +32,29 @@ const CreateEventScreen = ({ navigation }: any) => {
       return;
     }
 
-    try {
-      setLoading(true);
-      await dispatch(
-        createEvent({
-          userId: user.id,
-          eventData: {
-            title,
-            description,
-            date,
-            startTime,
-            endTime,
-          },
-        }),
-      ).unwrap();
+    await execute(
+      async () => {
+        await dispatch(
+          createEvent({
+            userId: user.id,
+            eventData: {
+              title,
+              description,
+              date,
+              startTime,
+              endTime,
+            },
+          }),
+        ).unwrap();
 
-      await dispatch(loadEvents(user.id));
-
-      Alert.alert(t('common.success'), t('success.eventCreated'), [
-        { text: t('common.ok'), onPress: () => navigation.goBack() },
-      ]);
-    } catch (error: any) {
-      Alert.alert(
-        t('common.error'),
-        error.message || t('errors.createEventFailed'),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setDate(selectedDate);
-    }
+        await dispatch(loadEvents(user.id));
+      },
+      {
+        successMessage: t('success.eventCreated'),
+        errorMessage: t('errors.createEventFailed'),
+        onSuccess: () => navigation.goBack(),
+      },
+    );
   };
 
   return (
@@ -92,71 +70,18 @@ const CreateEventScreen = ({ navigation }: any) => {
       />
 
       <ScrollView style={styles.content}>
-        <View style={styles.titleSection}>
-          <TextInput
-            style={styles.titleInput}
-            placeholder={t('calendar.eventTitle')}
-            value={title}
-            onChangeText={setTitle}
-            placeholderTextColor={theme.colors.text.tertiary}
-          />
-        </View>
-
-        <View style={styles.dateTimeSection}>
-          <TouchableOpacity
-            style={styles.dateTimeButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateTimeText}>
-              {date.toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.timeRow}>
-            <TextInput
-              style={styles.timeInput}
-              placeholder="10:30 AM"
-              value={startTime}
-              onChangeText={setStartTime}
-              placeholderTextColor={theme.colors.text.tertiary}
-            />
-            <Text style={styles.timeSeparator}>-</Text>
-            <TextInput
-              style={styles.timeInput}
-              placeholder="11:30 AM"
-              value={endTime}
-              onChangeText={setEndTime}
-              placeholderTextColor={theme.colors.text.tertiary}
-            />
-          </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-            />
-          )}
-        </View>
-
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionLabel}>{t('calendar.description')}</Text>
-          <TextInput
-            style={styles.descriptionInput}
-            placeholder={t('calendar.enterDescription')}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            placeholderTextColor={theme.colors.text.tertiary}
-          />
-        </View>
+        <EventForm
+          title={title}
+          description={description}
+          date={date}
+          startTime={startTime}
+          endTime={endTime}
+          onTitleChange={setTitle}
+          onDescriptionChange={setDescription}
+          onDateChange={setDate}
+          onStartTimeChange={setStartTime}
+          onEndTimeChange={setEndTime}
+        />
 
         <View style={styles.buttonContainer}>
           <Button
@@ -179,67 +104,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.backgroundSecondary,
   },
-  titleSection: {
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  titleInput: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    padding: 0,
-  },
-  dateTimeSection: {
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  dateTimeButton: {
-    marginBottom: theme.spacing.sm,
-  },
-  dateTimeText: {
-    ...theme.typography.body1,
-    color: theme.colors.text.primary,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeInput: {
-    ...theme.typography.body1,
-    color: theme.colors.text.primary,
-    padding: 0,
-  },
-  timeSeparator: {
-    ...theme.typography.body1,
-    color: theme.colors.text.primary,
-    marginHorizontal: theme.spacing.xs,
-  },
-  descriptionSection: {
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-  },
-  sectionLabel: {
-    ...theme.typography.label,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  descriptionInput: {
-    ...theme.typography.body1,
-    color: theme.colors.text.primary,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
   buttonContainer: {
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.xl,
-    marginBottom: 40,
+    marginBottom: theme.spacing.huge,
   },
 });
 

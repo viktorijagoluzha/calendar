@@ -1,91 +1,64 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  StatusBar,
-  TextInput,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
+import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useFormValidation } from '../../hooks/useFormValidation';
 import { updateProfile } from '../../store/slices/authSlice';
 import { Header, InputField, Button } from '../../components/common';
+import { PasswordInput } from '../../components/auth';
 import { UserAvatar } from '../../components/profile';
 import { t } from '../../i18n';
 import { theme } from '../../theme';
 
 const EditProfileScreen = ({ navigation }: any) => {
   const { user, dispatch } = useAuth();
+  const { loading, execute } = useAsyncAction();
+  const {
+    validateEmail,
+    validatePassword,
+    validatePasswordMatch,
+    validateRequiredField,
+  } = useFormValidation();
 
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSave = async () => {
-    if (!fullName.trim()) {
-      Alert.alert(t('common.error'), t('errors.enterFullName'));
-      return;
-    }
-
-    if (!email.trim()) {
-      Alert.alert(t('common.error'), t('errors.enterEmail'));
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert(t('common.error'), t('errors.invalidEmail'));
-      return;
-    }
+    if (!validateRequiredField(fullName, t('errors.enterFullName'))) return;
+    if (!validateEmail(email)) return;
 
     if (newPassword || confirmPassword) {
-      if (!currentPassword) {
-        Alert.alert(t('common.error'), t('errors.enterCurrentPassword'));
+      if (
+        !validateRequiredField(
+          currentPassword,
+          t('errors.enterCurrentPassword'),
+        )
+      )
         return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        Alert.alert(t('common.error'), t('errors.passwordsNotMatch'));
-        return;
-      }
-
-      if (newPassword.length < 6) {
-        Alert.alert(t('common.error'), t('errors.passwordMinLength'));
-        return;
-      }
+      if (!validatePasswordMatch(newPassword, confirmPassword)) return;
+      if (!validatePassword(newPassword)) return;
     }
 
-    try {
-      setLoading(true);
-      await dispatch(
-        updateProfile({
-          fullName,
-          email,
-          currentPassword: currentPassword || undefined,
-          newPassword: newPassword || undefined,
-        }),
-      ).unwrap();
-
-      Alert.alert(t('common.success'), t('success.profileUpdated'), [
-        { text: t('common.ok'), onPress: () => navigation.goBack() },
-      ]);
-    } catch (error: any) {
-      Alert.alert(
-        t('common.error'),
-        error.message || 'Failed to update profile',
-      );
-    } finally {
-      setLoading(false);
-    }
+    await execute(
+      async () => {
+        await dispatch(
+          updateProfile({
+            fullName,
+            email,
+            currentPassword: currentPassword || undefined,
+            newPassword: newPassword || undefined,
+          }),
+        ).unwrap();
+      },
+      {
+        successMessage: t('success.profileUpdated'),
+        errorMessage: t('errors.updateProfileFailed'),
+        onSuccess: () => navigation.goBack(),
+      },
+    );
   };
 
   return (
@@ -102,10 +75,7 @@ const EditProfileScreen = ({ navigation }: any) => {
 
       <ScrollView style={styles.content}>
         <View style={styles.avatarSection}>
-          <UserAvatar name={fullName || 'U'} size={100} />
-          <TouchableOpacity>
-            <Text style={styles.changePhoto}>{t('profile.changePhoto')}</Text>
-          </TouchableOpacity>
+          <UserAvatar name={fullName || 'U'} size={theme.avatarSizes.xlarge} />
         </View>
 
         <View style={styles.section}>
@@ -135,77 +105,29 @@ const EditProfileScreen = ({ navigation }: any) => {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t('auth.currentPassword')}</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder={t('auth.enterCurrentPassword')}
-                placeholderTextColor={theme.colors.text.tertiary}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry={!showCurrentPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                style={styles.eyeIcon}
-              >
-                <Icon
-                  name={showCurrentPassword ? 'eye-off' : 'eye'}
-                  size={22}
-                  color={theme.colors.text.tertiary}
-                />
-              </TouchableOpacity>
-            </View>
+            <PasswordInput
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder={t('auth.enterCurrentPassword')}
+            />
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t('auth.newPassword')}</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder={t('auth.enterNewPassword')}
-                placeholderTextColor={theme.colors.text.tertiary}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry={!showNewPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowNewPassword(!showNewPassword)}
-                style={styles.eyeIcon}
-              >
-                <Icon
-                  name={showNewPassword ? 'eye-off' : 'eye'}
-                  size={22}
-                  color={theme.colors.text.tertiary}
-                />
-              </TouchableOpacity>
-            </View>
+            <PasswordInput
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder={t('auth.enterNewPassword')}
+            />
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t('auth.confirmNewPassword')}</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder={t('auth.confirmNewPassword')}
-                placeholderTextColor={theme.colors.text.tertiary}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeIcon}
-              >
-                <Icon
-                  name={showConfirmPassword ? 'eye-off' : 'eye'}
-                  size={22}
-                  color={theme.colors.text.tertiary}
-                />
-              </TouchableOpacity>
-            </View>
+            <PasswordInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder={t('auth.confirmNewPasswordPlaceholder')}
+            />
           </View>
         </View>
 
@@ -236,12 +158,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  changePhoto: {
-    ...theme.typography.body2,
-    color: theme.colors.primary,
-    fontWeight: '600',
-    marginTop: theme.spacing.sm,
-  },
   section: {
     backgroundColor: theme.colors.background,
     marginTop: theme.spacing.sm,
@@ -261,24 +177,6 @@ const styles = StyleSheet.create({
     ...theme.typography.label,
     color: theme.colors.text.secondary,
     marginBottom: theme.spacing.xs,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.backgroundSecondary,
-    height: 50,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    ...theme.typography.body1,
-    color: theme.colors.text.primary,
-  },
-  eyeIcon: {
-    padding: theme.spacing.sm,
   },
   buttonContainer: {
     marginHorizontal: theme.spacing.lg,

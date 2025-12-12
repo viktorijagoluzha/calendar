@@ -11,6 +11,7 @@ interface MenuItemProps {
   showSwitch?: boolean;
   switchValue?: boolean;
   onSwitchChange?: (value: boolean) => void;
+  disabled?: boolean;
 }
 
 export const MenuItem: React.FC<MenuItemProps> = ({
@@ -21,6 +22,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
   showSwitch = false,
   switchValue = false,
   onSwitchChange,
+  disabled = false,
 }) => {
   const content = (
     <>
@@ -28,15 +30,18 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         <Icon
           name={icon}
           size={24}
-          color={theme.colors.primary}
+          color={disabled ? theme.colors.text.tertiary : theme.colors.primary}
           style={styles.menuIcon}
         />
-        <Text style={styles.menuLabel}>{label}</Text>
+        <Text style={[styles.menuLabel, disabled && styles.menuLabelDisabled]}>
+          {label}
+        </Text>
       </View>
       {showSwitch ? (
         <Switch
           value={switchValue}
           onValueChange={onSwitchChange}
+          disabled={disabled}
           trackColor={{
             false: theme.colors.border,
             true: theme.colors.primary,
@@ -54,11 +59,19 @@ export const MenuItem: React.FC<MenuItemProps> = ({
   );
 
   if (showSwitch || !onPress) {
-    return <View style={styles.menuItem}>{content}</View>;
+    return (
+      <View style={[styles.menuItem, disabled && styles.menuItemDisabled]}>
+        {content}
+      </View>
+    );
   }
 
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.menuItem, disabled && styles.menuItemDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+    >
       {content}
     </TouchableOpacity>
   );
@@ -83,5 +96,11 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     ...theme.typography.body1,
+  },
+  menuLabelDisabled: {
+    color: theme.colors.text.tertiary,
+  },
+  menuItemDisabled: {
+    opacity: 0.5,
   },
 });

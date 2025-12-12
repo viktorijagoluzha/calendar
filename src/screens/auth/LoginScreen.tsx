@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
+import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useFormValidation } from '../../hooks/useFormValidation';
 import { signIn, signInWithBiometrics } from '../../store/slices/authSlice';
 import { biometricService } from '../../services/biometricService';
 import { t } from '../../i18n';
@@ -20,6 +22,8 @@ const LoginScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [showBiometric, setShowBiometric] = useState(false);
   const { isLoading, biometricsEnabled, user, dispatch } = useAuth();
+  const { loading, execute } = useAsyncAction();
+  const { validateRequiredField } = useFormValidation();
 
   useEffect(() => {
     checkBiometricAvailability();
@@ -40,30 +44,28 @@ const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert(t('common.error'), t('errors.enterPassword'));
-      return;
-    }
+    if (!validateRequiredField(email, t('errors.enterEmail'))) return;
+    if (!validateRequiredField(password, t('errors.enterPassword'))) return;
 
-    try {
-      await dispatch(signIn({ email, password })).unwrap();
-    } catch (error: any) {
-      Alert.alert(
-        t('errors.signInFailed'),
-        error.message || t('errors.invalidCredentials'),
-      );
-    }
+    await execute(
+      async () => {
+        await dispatch(signIn({ email, password })).unwrap();
+      },
+      {
+        errorMessage: t('errors.invalidCredentials'),
+      },
+    );
   };
 
   const handleBiometricSignIn = async () => {
-    try {
-      await dispatch(signInWithBiometrics()).unwrap();
-    } catch (error: any) {
-      Alert.alert(
-        t('errors.authFailed'),
-        error.message || t('errors.authFailed'),
-      );
-    }
+    await execute(
+      async () => {
+        await dispatch(signInWithBiometrics()).unwrap();
+      },
+      {
+        errorMessage: t('errors.authFailed'),
+      },
+    );
   };
 
   const handleForgotPassword = () => {
@@ -106,9 +108,9 @@ const LoginScreen = ({ navigation }: any) => {
       <TouchableOpacity
         style={styles.signInButton}
         onPress={handleSignIn}
-        disabled={isLoading}
+        disabled={isLoading || loading}
       >
-        {isLoading ? (
+        {isLoading || loading ? (
           <ActivityIndicator color={theme.colors.text.inverse} />
         ) : (
           <Text style={styles.signInButtonText}>{t('auth.signIn')}</Text>
@@ -119,6 +121,7 @@ const LoginScreen = ({ navigation }: any) => {
         <TouchableOpacity
           style={styles.biometricButton}
           onPress={handleBiometricSignIn}
+          disabled={isLoading || loading}
         >
           <Text style={styles.biometricButtonText}>
             {t('auth.biometricLogin')}

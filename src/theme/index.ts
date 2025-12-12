@@ -18,6 +18,12 @@ export const theme = {
   typography,
   shadows,
   borderRadius,
+  avatarSizes: {
+    small: 40,
+    medium: 60,
+    large: 80,
+    xlarge: 100,
+  },
 };
 
 export type Theme = typeof theme;
